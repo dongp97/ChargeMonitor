@@ -42,16 +42,20 @@ class PhaseManager(private val repository: ChargeRepository) {
 
     private suspend fun endPhase(now: Long) {
         val type = currentType ?: return
-        val phase = Phase(
-            type = type,
-            startTime = startTime,
-            endTime = now,
-            durationS = (now - startTime) / 1000,
-            totalMah = totalMah,
-            avgCurrentMa = if (sampleCount > 0) currentSum / sampleCount else 0.0,
-            avgPowerW = if (sampleCount > 0) powerSum / sampleCount else 0.0
-        )
-        repository.insertPhase(phase)
+        val durationS = (now - startTime) / 1000
+        // 丢弃过短的阶段（< 30 秒），减少频繁拔插产生的噪音
+        if (durationS >= MIN_PHASE_DURATION_S) {
+            val phase = Phase(
+                type = type,
+                startTime = startTime,
+                endTime = now,
+                durationS = durationS,
+                totalMah = totalMah,
+                avgCurrentMa = if (sampleCount > 0) currentSum / sampleCount else 0.0,
+                avgPowerW = if (sampleCount > 0) powerSum / sampleCount else 0.0
+            )
+            repository.insertPhase(phase)
+        }
         currentType = null
     }
 
@@ -72,5 +76,9 @@ class PhaseManager(private val repository: ChargeRepository) {
         currentSum += abs(current)
         powerSum += abs(powerW)
         sampleCount++
+    }
+
+    companion object {
+        private const val MIN_PHASE_DURATION_S = 30L
     }
 }
