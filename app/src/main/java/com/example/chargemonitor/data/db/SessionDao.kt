@@ -28,6 +28,9 @@ interface SessionDao {
     @Query("SELECT * FROM session WHERE end_time IS NULL ORDER BY start_time DESC LIMIT 1")
     suspend fun getActiveSession(): Session?
 
+    @Query("UPDATE session SET end_time = :endTime, duration_s = (:endTime - start_time) / 1000 WHERE end_time IS NULL")
+    suspend fun endActiveSessions(endTime: Long)
+
     @Query("DELETE FROM session WHERE id = :id")
     suspend fun delete(id: Long)
 }

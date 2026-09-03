@@ -27,6 +27,8 @@ class ChargeRepository(
 
     suspend fun getActiveSession(): Session? = sessionDao.getActiveSession()
 
+    suspend fun endActiveSessions(endTime: Long) = sessionDao.endActiveSessions(endTime)
+
     suspend fun deleteSession(id: Long) = sessionDao.delete(id)
 
     // ==================== Sample ====================

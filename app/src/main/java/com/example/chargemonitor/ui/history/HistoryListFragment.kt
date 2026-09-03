@@ -55,7 +55,7 @@ class HistoryListFragment : Fragment() {
         lifecycleScope.launch {
             database.sessionDao().getAllFlow().collectLatest { sessions ->
                 adapter.submitList(sessions)
-                binding.tvSessionCount.text = "共 ${sessions.size} 次充电"
+                binding.tvSessionCount.text = getString(R.string.session_count, sessions.size)
                 binding.tvEmpty.visibility = if (sessions.isEmpty()) View.VISIBLE else View.GONE
             }
         }

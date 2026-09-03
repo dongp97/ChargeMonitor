@@ -15,6 +15,7 @@ import com.example.chargemonitor.battery.BatteryReader
 import com.example.chargemonitor.battery.ChargeSessionManager
 import com.example.chargemonitor.battery.ChargeType
 import com.example.chargemonitor.data.repository.ChargeRepository
+import com.example.chargemonitor.ui.main.MainActivity
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -60,6 +61,11 @@ class ChargeMonitorService : Service() {
         val app = application as ChargeMonitorApp
         repository = ChargeRepository(app.database.sessionDao(), app.database.sampleDao())
         sessionManager = ChargeSessionManager(repository)
+
+        // 服务被系统杀掉重启后，结束数据库里遗留的未结束会话，避免产生僵尸会话
+        scope.launch {
+            runCatching { repository.endActiveSessions(System.currentTimeMillis()) }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -127,7 +133,7 @@ class ChargeMonitorService : Service() {
     }
 
     private fun createNotification(power: Double, mah: Double, type: String): android.app.Notification {
-        val intent = Intent(this, Class.forName("com.example.chargemonitor.ui.main.MainActivity")).apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
