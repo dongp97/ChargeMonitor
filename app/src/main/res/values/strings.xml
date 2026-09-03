@@ -43,4 +43,12 @@
     <string name="session_count">共 %d 次充电</string>
     <string name="notification_permission_required">需要通知权限才能显示充电状态</string>
     <string name="grant_permission">授权</string>
+    <string name="phase_charging">充电</string>
+    <string name="phase_discharging">用电</string>
+    <string name="phase_duration">时长</string>
+    <string name="phase_avg_current">平均电流</string>
+    <string name="phase_avg_power">平均功率</string>
+    <string name="phase_charged_mah">充入 %s mAh</string>
+    <string name="phase_consumed_mah">消耗 %s mAh</string>
+    <string name="phase_count">共 %d 个阶段</string>
 </resources>

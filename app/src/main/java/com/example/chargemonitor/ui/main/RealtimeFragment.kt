@@ -1,22 +1,20 @@
 package com.example.chargemonitor.ui.main
 
-import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import com.example.chargemonitor.R
 import com.example.chargemonitor.databinding.FragmentRealtimeBinding
 import com.example.chargemonitor.service.ChargeMonitorService
 import com.example.chargemonitor.ui.widget.ChargeCurveView
+import com.example.chargemonitor.ui.widget.CurveMode
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * 实时监测页：订阅前台服务的数据流，绘制曲线，支持全屏切换。
+ * 实时监测页：上下两个曲线图（电压+电流双轴、功率单轴），订阅前台服务数据流。
  */
 class RealtimeFragment : Fragment() {
 
@@ -24,8 +22,6 @@ class RealtimeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var subscribed = false
-    private var fullscreenDialog: Dialog? = null
-    private var fullscreenCurve: ChargeCurveView? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,9 +35,9 @@ class RealtimeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnToggleFullscreen.setOnClickListener { toggleFullscreen() }
+        binding.curveVc.mode = CurveMode.VOLTAGE_CURRENT
+        binding.curvePower.mode = CurveMode.POWER
 
-        // 等待 Service 绑定完成后订阅一次数据
         viewLifecycleOwner.lifecycleScope.launch {
             (requireActivity() as MainActivity).serviceFlow.collectLatest { svc ->
                 if (svc != null && !subscribed) {
@@ -62,8 +58,8 @@ class RealtimeFragment : Fragment() {
                     voltageV = svc.voltage.value,
                     currentMa = svc.current.value
                 )
-                binding.curveView.addPoint(point)
-                fullscreenCurve?.addPoint(point)
+                binding.curveVc.addPoint(point)
+                binding.curvePower.addPoint(point)
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
@@ -93,38 +89,8 @@ class RealtimeFragment : Fragment() {
         }
     }
 
-    private fun toggleFullscreen() {
-        if (fullscreenDialog?.isShowing == true) {
-            fullscreenDialog?.dismiss()
-            return
-        }
-
-        val curve = ChargeCurveView(requireContext())
-        fullscreenCurve = curve
-        curve.setData(binding.curveView.getPoints())
-
-        val dialog = Dialog(requireContext())
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(curve)
-        dialog.window?.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
-        )
-        dialog.setOnDismissListener {
-            fullscreenDialog = null
-            fullscreenCurve = null
-            binding.btnToggleFullscreen.text = getString(R.string.fullscreen)
-        }
-        fullscreenDialog = dialog
-        dialog.show()
-        binding.btnToggleFullscreen.text = getString(R.string.exit_fullscreen)
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
-        fullscreenDialog?.dismiss()
-        fullscreenDialog = null
-        fullscreenCurve = null
         _binding = null
     }
 }

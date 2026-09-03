@@ -15,8 +15,12 @@ import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.abs
 
 /**
- * 自绘充电曲线 View
- * 支持：三线绘制（功率/电压/电流）、Y 轴数值刻度、双指缩放、实时滚动
+ * 曲线模式：POWER 单轴画功率；VOLTAGE_CURRENT 双轴画电压（左）+ 电流（右）。
+ */
+enum class CurveMode { POWER, VOLTAGE_CURRENT }
+
+/**
+ * 自绘充电曲线 View，支持双 Y 轴、数值刻度、双指缩放、实时滚动。
  */
 class ChargeCurveView @JvmOverloads constructor(
     context: Context,
@@ -31,27 +35,25 @@ class ChargeCurveView @JvmOverloads constructor(
         val currentMa: Double
     )
 
-    // 数据
     private val dataPoints = CopyOnWriteArrayList<CurvePoint>()
-    private val maxPoints = 1800  // 实时模式最多保留约 1 小时的点（2 秒一个）
+    private val maxPoints = 1800
 
-    // 绘制范围
     private var startTime = 0L
     private var endTime = 0L
-    private var minValue = 0.0
-    private var maxValue = 100.0
+    private var leftMin = 0.0
+    private var leftMax = 1.0
+    private var rightMin = 0.0
+    private var rightMax = 1.0
 
-    // 缩放
     private var scaleFactor = 1.0f
     private val scaleDetector: ScaleGestureDetector
     private val gestureDetector: GestureDetector
 
-    /**
-     * true 时显示全部数据（历史回看）；false 时显示 30 分钟实时窗口
-     */
+    var mode: CurveMode = CurveMode.POWER
+
+    /** true 显示全部数据（历史回看）；false 显示 30 分钟实时窗口 */
     var isFullRange = false
 
-    // 画笔
     private val powerPaint = Paint().apply {
         color = ContextCompat.getColor(context, R.color.power_red)
         strokeWidth = 3f
@@ -85,11 +87,6 @@ class ChargeCurveView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
-    // 显示控制
-    var showPower = true
-    var showVoltage = true
-    var showCurrent = true
-
     init {
         scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -108,7 +105,7 @@ class ChargeCurveView @JvmOverloads constructor(
                 distanceX: Float,
                 distanceY: Float
             ): Boolean {
-                if (isFullRange) return false  // 历史全览模式不滚动
+                if (isFullRange) return false
                 val timeSpan = endTime - startTime
                 if (timeSpan <= 0 || width <= 0) return false
                 val shift = (distanceX / width * timeSpan).toLong()
@@ -120,9 +117,6 @@ class ChargeCurveView @JvmOverloads constructor(
         })
     }
 
-    /**
-     * 添加新数据点（实时模式）
-     */
     fun addPoint(point: CurvePoint) {
         dataPoints.add(point)
         while (dataPoints.size > maxPoints) {
@@ -132,22 +126,11 @@ class ChargeCurveView @JvmOverloads constructor(
         invalidate()
     }
 
-    /**
-     * 清空数据
-     */
     fun clear() {
         dataPoints.clear()
         invalidate()
     }
 
-    /**
-     * 获取当前全部数据点（用于全屏切换时复制到全屏曲线）
-     */
-    fun getPoints(): List<CurvePoint> = dataPoints.toList()
-
-    /**
-     * 设置完整数据（用于历史回看）
-     */
     fun setData(points: List<CurvePoint>) {
         dataPoints.clear()
         dataPoints.addAll(points)
@@ -163,35 +146,44 @@ class ChargeCurveView @JvmOverloads constructor(
             startTime = dataPoints.first().timestamp
             endTime = latest
         } else {
-            val windowMs = (30 * 60 * 1000 / scaleFactor).toLong()  // 30 分钟基础窗口
+            val windowMs = (30 * 60 * 1000 / scaleFactor).toLong()
             endTime = latest
             startTime = latest - windowMs
         }
 
-        // 计算值域（三条线共享）
-        val visiblePoints = dataPoints.filter { it.timestamp in startTime..endTime }
-        if (visiblePoints.isNotEmpty()) {
-            val values = mutableListOf<Double>()
-            if (showPower) values.addAll(visiblePoints.map { it.powerW })
-            if (showVoltage) values.addAll(visiblePoints.map { it.voltageV })
-            if (showCurrent) values.addAll(visiblePoints.map { it.currentMa })
+        val visible = dataPoints.filter { it.timestamp in startTime..endTime }
+        if (visible.isEmpty()) return
 
-            if (values.isNotEmpty()) {
-                var lo = values.minOrNull() ?: return
-                var hi = values.maxOrNull() ?: return
-                if (hi - lo < 1e-9) {
-                    // 所有值相同，给一个默认范围，避免除零
-                    hi = lo + 1.0
-                    lo = lo - 1.0
-                } else {
-                    val padding = (hi - lo) * 0.1
-                    lo -= padding
-                    hi += padding
+        when (mode) {
+            CurveMode.POWER -> {
+                applyRange(visible.map { it.powerW }) { lo, hi ->
+                    leftMin = lo; leftMax = hi
                 }
-                minValue = lo
-                maxValue = hi
+            }
+            CurveMode.VOLTAGE_CURRENT -> {
+                applyRange(visible.map { it.voltageV }) { lo, hi ->
+                    leftMin = lo; leftMax = hi
+                }
+                applyRange(visible.map { it.currentMa }) { lo, hi ->
+                    rightMin = lo; rightMax = hi
+                }
             }
         }
+    }
+
+    private inline fun applyRange(values: List<Double>, assign: (Double, Double) -> Unit) {
+        if (values.isEmpty()) return
+        var lo = values.minOrNull() ?: return
+        var hi = values.maxOrNull() ?: return
+        if (hi - lo < 1e-9) {
+            hi = lo + 1.0
+            lo = lo - 1.0
+        } else {
+            val padding = (hi - lo) * 0.1
+            lo -= padding
+            hi += padding
+        }
+        assign(lo, hi)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -208,78 +200,87 @@ class ChargeCurveView @JvmOverloads constructor(
             return
         }
 
-        val paddingLeft = 72f    // 左侧放 Y 轴刻度
-        val paddingRight = 16f
+        val paddingLeft = 64f
+        val paddingRight = if (mode == CurveMode.VOLTAGE_CURRENT) 64f else 24f
         val paddingTop = 16f
-        val paddingBottom = 36f  // 底部放 X 轴时间
+        val paddingBottom = 32f
 
         val chartLeft = paddingLeft
         val chartTop = paddingTop
         val chartWidth = width - paddingLeft - paddingRight
         val chartHeight = height - paddingTop - paddingBottom
-
         if (chartWidth <= 0 || chartHeight <= 0) return
 
-        // 网格
         drawGrid(canvas, chartLeft, chartTop, chartWidth, chartHeight)
+        drawYAxisLabels(canvas, chartLeft, chartTop, chartWidth, chartHeight)
 
-        // Y 轴数值刻度
-        drawYAxisLabels(canvas, chartLeft, chartTop, chartHeight)
-
-        // 曲线
-        val visiblePoints = dataPoints.filter { it.timestamp in startTime..endTime }
-        if (visiblePoints.size >= 2) {
-            if (showPower) drawCurve(canvas, visiblePoints, { it.powerW }, powerPaint, chartLeft, chartTop, chartWidth, chartHeight)
-            if (showVoltage) drawCurve(canvas, visiblePoints, { it.voltageV }, voltagePaint, chartLeft, chartTop, chartWidth, chartHeight)
-            if (showCurrent) drawCurve(canvas, visiblePoints, { it.currentMa }, currentPaint, chartLeft, chartTop, chartWidth, chartHeight)
+        val visible = dataPoints.filter { it.timestamp in startTime..endTime }
+        if (visible.size >= 2) {
+            when (mode) {
+                CurveMode.POWER ->
+                    drawCurve(canvas, visible, { it.powerW }, powerPaint, chartLeft, chartTop, chartWidth, chartHeight, leftMin, leftMax)
+                CurveMode.VOLTAGE_CURRENT -> {
+                    drawCurve(canvas, visible, { it.voltageV }, voltagePaint, chartLeft, chartTop, chartWidth, chartHeight, leftMin, leftMax)
+                    drawCurve(canvas, visible, { it.currentMa }, currentPaint, chartLeft, chartTop, chartWidth, chartHeight, rightMin, rightMax)
+                }
+            }
         }
 
-        // X 轴时间
         drawTimeAxis(canvas, chartLeft, chartTop, chartWidth, chartHeight)
     }
 
-    private fun drawGrid(canvas: Canvas, left: Float, top: Float, chartWidth: Float, chartHeight: Float) {
+    private fun drawGrid(canvas: Canvas, left: Float, top: Float, w: Float, h: Float) {
         for (i in 0..5) {
-            val y = top + chartHeight * i / 5
-            canvas.drawLine(left, y, left + chartWidth, y, gridPaint)
+            val y = top + h * i / 5
+            canvas.drawLine(left, y, left + w, y, gridPaint)
         }
         for (i in 0..6) {
-            val x = left + chartWidth * i / 6
-            canvas.drawLine(x, top, x, top + chartHeight, gridPaint)
+            val x = left + w * i / 6
+            canvas.drawLine(x, top, x, top + h, gridPaint)
         }
     }
 
-    private fun drawYAxisLabels(canvas: Canvas, left: Float, top: Float, chartHeight: Float) {
+    private fun drawYAxisLabels(canvas: Canvas, left: Float, top: Float, w: Float, h: Float) {
+        // 左轴刻度
         for (i in 0..5) {
-            val value = maxValue - (maxValue - minValue) * i / 5.0
-            val y = top + chartHeight * i / 5
+            val value = leftMax - (leftMax - leftMin) * i / 5.0
+            val y = top + h * i / 5
             val label = formatAxisValue(value)
-            // 右对齐到 Y 轴左侧
-            val textWidth = textPaint.measureText(label)
-            canvas.drawText(label, left - textWidth - 8f, y + 7f, textPaint)
+            val tw = textPaint.measureText(label)
+            canvas.drawText(label, left - tw - 6f, y + 7f, textPaint)
+        }
+        // 右轴刻度（双轴模式）
+        if (mode == CurveMode.VOLTAGE_CURRENT) {
+            for (i in 0..5) {
+                val value = rightMax - (rightMax - rightMin) * i / 5.0
+                val y = top + h * i / 5
+                val label = formatAxisValue(value)
+                canvas.drawText(label, left + w + 6f, y + 7f, textPaint)
+            }
         }
     }
 
     private fun drawCurve(
         canvas: Canvas,
         points: List<CurvePoint>,
-        valueExtractor: (CurvePoint) -> Double,
+        extractor: (CurvePoint) -> Double,
         paint: Paint,
         left: Float,
         top: Float,
-        chartWidth: Float,
-        chartHeight: Float
+        w: Float,
+        h: Float,
+        vMin: Double,
+        vMax: Double
     ) {
-        val path = Path()
-        var first = true
         val timeSpan = (endTime - startTime).toFloat()
-        val valueSpan = (maxValue - minValue).toFloat()
+        val valueSpan = (vMax - vMin).toFloat()
         if (timeSpan <= 0f || valueSpan <= 0f) return
 
-        for (point in points) {
-            val x = left + (point.timestamp - startTime).toFloat() / timeSpan * chartWidth
-            val y = top + chartHeight - ((valueExtractor(point) - minValue).toFloat() / valueSpan * chartHeight)
-
+        val path = Path()
+        var first = true
+        for (p in points) {
+            val x = left + (p.timestamp - startTime).toFloat() / timeSpan * w
+            val y = top + h - ((extractor(p) - vMin).toFloat() / valueSpan * h)
             if (first) {
                 path.moveTo(x, y)
                 first = false
@@ -290,15 +291,15 @@ class ChargeCurveView @JvmOverloads constructor(
         canvas.drawPath(path, paint)
     }
 
-    private fun drawTimeAxis(canvas: Canvas, left: Float, top: Float, chartWidth: Float, chartHeight: Float) {
+    private fun drawTimeAxis(canvas: Canvas, left: Float, top: Float, w: Float, h: Float) {
         val timeSpan = endTime - startTime
         if (timeSpan <= 0) return
         for (i in 0..6) {
-            val x = left + chartWidth * i / 6
+            val x = left + w * i / 6
             val time = startTime + timeSpan * i / 6
             val label = formatTime(time)
-            val textWidth = textPaint.measureText(label)
-            canvas.drawText(label, x - textWidth / 2f, top + chartHeight + 24f, textPaint)
+            val tw = textPaint.measureText(label)
+            canvas.drawText(label, x - tw / 2f, top + h + 24f, textPaint)
         }
     }
 
@@ -307,8 +308,8 @@ class ChargeCurveView @JvmOverloads constructor(
         return when {
             a >= 1000 -> String.format("%.0f", v)
             a >= 100 -> String.format("%.0f", v)
-            a >= 10 -> String.format("%.0f", v)
-            else -> String.format("%.1f", v)
+            a >= 10 -> String.format("%.1f", v)
+            else -> String.format("%.2f", v)
         }
     }
 

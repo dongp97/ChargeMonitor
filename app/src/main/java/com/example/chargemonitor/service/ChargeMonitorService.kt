@@ -14,6 +14,7 @@ import com.example.chargemonitor.R
 import com.example.chargemonitor.battery.BatteryReader
 import com.example.chargemonitor.battery.ChargeSessionManager
 import com.example.chargemonitor.battery.ChargeType
+import com.example.chargemonitor.battery.PhaseManager
 import com.example.chargemonitor.data.repository.ChargeRepository
 import com.example.chargemonitor.ui.main.MainActivity
 import kotlinx.coroutines.*
@@ -24,6 +25,7 @@ class ChargeMonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private lateinit var batteryReader: BatteryReader
     private lateinit var sessionManager: ChargeSessionManager
+    private lateinit var phaseManager: PhaseManager
     private lateinit var repository: ChargeRepository
 
     private var sampleCount = 0L
@@ -59,8 +61,9 @@ class ChargeMonitorService : Service() {
         super.onCreate()
         batteryReader = BatteryReader(this)
         val app = application as ChargeMonitorApp
-        repository = ChargeRepository(app.database.sessionDao(), app.database.sampleDao())
+        repository = ChargeRepository(app.database.sessionDao(), app.database.sampleDao(), app.database.phaseDao())
         sessionManager = ChargeSessionManager(repository)
+        phaseManager = PhaseManager(repository)
 
         // 服务被系统杀掉重启后，结束数据库里遗留的未结束会话，避免产生僵尸会话
         scope.launch {
@@ -103,9 +106,14 @@ class ChargeMonitorService : Service() {
                     _chargeType.value = data.chargeType
                     _isCharging.value = data.chargeType != ChargeType.NONE
 
+                    val now = System.currentTimeMillis()
+
                     // 处理会话
                     sessionManager.onSample(data)
                     _sessionState.value = sessionManager.state.value
+
+                    // 处理充/用电阶段
+                    phaseManager.onSample(data, now)
 
                     // 从当前会话获取累计电量
                     val activeSession = sessionManager.state.value

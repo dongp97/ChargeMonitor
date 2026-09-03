@@ -1,14 +1,17 @@
 package com.example.chargemonitor.data.repository
 
+import com.example.chargemonitor.data.db.PhaseDao
 import com.example.chargemonitor.data.db.SampleDao
 import com.example.chargemonitor.data.db.SessionDao
+import com.example.chargemonitor.data.entity.Phase
 import com.example.chargemonitor.data.entity.Sample
 import com.example.chargemonitor.data.entity.Session
 import kotlinx.coroutines.flow.Flow
 
 class ChargeRepository(
     private val sessionDao: SessionDao,
-    private val sampleDao: SampleDao
+    private val sampleDao: SampleDao,
+    private val phaseDao: PhaseDao
 ) {
 
     // ==================== Session ====================
@@ -50,4 +53,12 @@ class ChargeRepository(
     suspend fun deleteSamplesOlderThan(threshold: Long) = sampleDao.deleteOlderThan(threshold)
 
     suspend fun deleteSamplesBySession(sessionId: Long) = sampleDao.deleteBySession(sessionId)
+
+    // ==================== Phase ====================
+
+    suspend fun insertPhase(phase: Phase): Long = phaseDao.insert(phase)
+
+    fun getAllPhasesFlow(): Flow<List<Phase>> = phaseDao.getAllFlow()
+
+    suspend fun deletePhasesOlderThan(threshold: Long) = phaseDao.deleteOlderThan(threshold)
 }
