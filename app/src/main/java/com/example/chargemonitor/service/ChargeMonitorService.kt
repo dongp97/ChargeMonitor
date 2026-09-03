@@ -115,18 +115,17 @@ class ChargeMonitorService : Service() {
                     // 处理充/用电阶段
                     phaseManager.onSample(data, now)
 
-                    // 从当前会话获取累计电量
-                    val activeSession = sessionManager.state.value
-                    if (activeSession is ChargeSessionManager.State.Active) {
-                        _mah.value = activeSession.session.totalMah
+                    // 当前阶段累计电量：充电显示充入 mAh，放电显示消耗 mAh
+                    val isChargingNow = data.chargeType != ChargeType.NONE
+                    _mah.value = if (isChargingNow) {
+                        (sessionManager.state.value as? ChargeSessionManager.State.Active)
+                            ?.session?.totalMah ?: 0.0
                     } else {
-                        _mah.value = 0.0
+                        phaseManager.currentMah
                     }
 
-                    // 更新通知（充电显示充入 mAh，放电显示消耗 mAh）
-                    val isChargingNow = data.chargeType != ChargeType.NONE
-                    val displayMah = if (isChargingNow) _mah.value else phaseManager.currentMah
-                    updateNotification(powerW, displayMah, data.chargeType.label, isChargingNow)
+                    // 更新通知
+                    updateNotification(powerW, _mah.value, data.chargeType.label, isChargingNow)
 
                     // 每 100 次采样（约 200 秒）清理一次过期的采样明细
                     sampleCount++
