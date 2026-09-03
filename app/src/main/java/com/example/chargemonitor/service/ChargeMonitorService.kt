@@ -78,7 +78,7 @@ class ChargeMonitorService : Service() {
     }
 
     private fun startForeground() {
-        val notification = createNotification(0.0, 0.0, "未充电")
+        val notification = createNotification(0.0, 0.0, "未充电", false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 ChargeMonitorApp.NOTIFICATION_ID,
@@ -123,8 +123,10 @@ class ChargeMonitorService : Service() {
                         _mah.value = 0.0
                     }
 
-                    // 更新通知
-                    updateNotification(powerW, _mah.value, data.chargeType.label)
+                    // 更新通知（充电显示充入 mAh，放电显示消耗 mAh）
+                    val isChargingNow = data.chargeType != ChargeType.NONE
+                    val displayMah = if (isChargingNow) _mah.value else phaseManager.currentMah
+                    updateNotification(powerW, displayMah, data.chargeType.label, isChargingNow)
 
                     // 每 100 次采样（约 200 秒）清理一次过期的采样明细
                     sampleCount++
@@ -140,7 +142,7 @@ class ChargeMonitorService : Service() {
         }
     }
 
-    private fun createNotification(power: Double, mah: Double, type: String): android.app.Notification {
+    private fun createNotification(power: Double, mah: Double, type: String, isCharging: Boolean): android.app.Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -149,9 +151,14 @@ class ChargeMonitorService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val mahText = if (isCharging)
+            "已充入 ${String.format("%.0f", mah)}mAh"
+        else
+            "已消耗 ${String.format("%.0f", mah)}mAh"
+
         return NotificationCompat.Builder(this, ChargeMonitorApp.CHANNEL_ID)
             .setContentTitle("$type • ${String.format("%.1f", power)}W")
-            .setContentText("已充入 ${String.format("%.0f", mah)}mAh")
+            .setContentText(mahText)
             .setSmallIcon(R.drawable.ic_charging)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -159,8 +166,8 @@ class ChargeMonitorService : Service() {
             .build()
     }
 
-    private fun updateNotification(power: Double, mah: Double, type: String) {
-        val notification = createNotification(power, mah, type)
+    private fun updateNotification(power: Double, mah: Double, type: String, isCharging: Boolean) {
+        val notification = createNotification(power, mah, type, isCharging)
         val manager = getSystemService(android.app.NotificationManager::class.java)
         manager.notify(ChargeMonitorApp.NOTIFICATION_ID, notification)
     }

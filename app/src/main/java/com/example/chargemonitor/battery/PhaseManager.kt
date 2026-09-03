@@ -7,14 +7,18 @@ import kotlin.math.abs
 /**
  * 充/用电阶段管理：以充电状态切换为分节点，划分充电阶段和用电阶段，
  * 统计每个阶段的时长、平均电流、平均功率、累计 mAh（充电 mAh 或放电 mAh）。
+ * 当前阶段的类型与累计 mAh 通过只读属性暴露，供通知栏等实时读取。
  */
 class PhaseManager(private val repository: ChargeRepository) {
 
-    private var currentType: String? = null
+    var currentType: String? = null
+        private set
+    var currentMah: Double = 0.0
+        private set
+
     private var startTime = 0L
     private var lastSampleTs = 0L
     private var sampleCount = 0
-    private var totalMah = 0.0
     private var currentSum = 0.0
     private var powerSum = 0.0
 
@@ -35,7 +39,7 @@ class PhaseManager(private val repository: ChargeRepository) {
         startTime = now
         lastSampleTs = now
         sampleCount = 0
-        totalMah = 0.0
+        currentMah = 0.0
         currentSum = 0.0
         powerSum = 0.0
     }
@@ -50,7 +54,7 @@ class PhaseManager(private val repository: ChargeRepository) {
                 startTime = startTime,
                 endTime = now,
                 durationS = durationS,
-                totalMah = totalMah,
+                totalMah = currentMah,
                 avgCurrentMa = if (sampleCount > 0) currentSum / sampleCount else 0.0,
                 avgPowerW = if (sampleCount > 0) powerSum / sampleCount else 0.0
             )
@@ -71,7 +75,7 @@ class PhaseManager(private val repository: ChargeRepository) {
             maxOf(current, 0.0) * deltaT / 3600.0
         else
             maxOf(-current, 0.0) * deltaT / 3600.0
-        totalMah += mah
+        currentMah += mah
 
         currentSum += abs(current)
         powerSum += abs(powerW)
