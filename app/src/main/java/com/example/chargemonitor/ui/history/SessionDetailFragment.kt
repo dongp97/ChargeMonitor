@@ -86,6 +86,7 @@ class SessionDetailFragment : Fragment() {
                     currentMa = sample.currentMa
                 )
             }
+            binding.curveView.isFullRange = true
             binding.curveView.setData(curvePoints)
         }
     }

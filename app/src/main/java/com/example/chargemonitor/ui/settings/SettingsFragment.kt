@@ -12,7 +12,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
         // 可以在这里添加设置变更监听
         findPreference<ListPreference>("retention_days")?.setOnPreferenceChangeListener { _, _ ->
-            // TODO: 更新清理策略
+            // 设置由 ListPreference 自动持久化，清理逻辑会在下次采样时读取最新天数
             true
         }
     }

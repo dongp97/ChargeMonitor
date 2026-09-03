@@ -166,10 +166,10 @@ class ChargeSessionManager(
     }
 
     /**
-     * 清理 90 天前的采样数据
+     * 清理指定天数前的采样数据
      */
-    suspend fun cleanupOldSamples() {
-        val threshold = System.currentTimeMillis() - (90L * 24 * 60 * 60 * 1000)
+    suspend fun cleanupOldSamples(retentionDays: Int = 90) {
+        val threshold = System.currentTimeMillis() - (retentionDays * 24L * 60 * 60 * 1000)
         repository.deleteSamplesOlderThan(threshold)
     }
 

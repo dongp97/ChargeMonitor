@@ -8,6 +8,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.preference.PreferenceManager
 import com.example.chargemonitor.ChargeMonitorApp
 import com.example.chargemonitor.R
 import com.example.chargemonitor.battery.BatteryReader
@@ -111,10 +112,10 @@ class ChargeMonitorService : Service() {
                     // 更新通知
                     updateNotification(powerW, _mah.value, data.chargeType.label)
 
-                    // 每 100 次采样（约 200 秒）清理一次 90 天前的数据
+                    // 每 100 次采样（约 200 秒）清理一次过期的采样明细
                     sampleCount++
                     if (sampleCount % 100 == 0L) {
-                        sessionManager.cleanupOldSamples()
+                        sessionManager.cleanupOldSamples(retentionDays())
                     }
 
                 } catch (e: Exception) {
@@ -148,6 +149,11 @@ class ChargeMonitorService : Service() {
         val notification = createNotification(power, mah, type)
         val manager = getSystemService(android.app.NotificationManager::class.java)
         manager.notify(ChargeMonitorApp.NOTIFICATION_ID, notification)
+    }
+
+    private fun retentionDays(): Int {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        return prefs.getString("retention_days", "90")?.toIntOrNull() ?: 90
     }
 
     private val binder = LocalBinder(this)
