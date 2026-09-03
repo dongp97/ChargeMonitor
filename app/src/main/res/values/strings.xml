@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">充电监测</string>
+    <string name="tab_realtime">实时</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_settings">设置</string>
+    <string name="power_unit">W</string>
+    <string name="mah_unit">mAh</string>
+    <string name="voltage_unit">V</string>
+    <string name="current_unit">mA</string>
+    <string name="temp_unit">℃</string>
+    <string name="voltage_label">电压</string>
+    <string name="current_label">电流</string>
+    <string name="temp_label">温度</string>
+    <string name="charging">充电中</string>
+    <string name="not_charging">未充电</string>
+    <string name="wireless_charging">无线充电</string>
+    <string name="wired_charging">有线充电</string>
+    <string name="usb_charging">USB充电</string>
+    <string name="start_monitoring">开始监测</string>
+    <string name="stop_monitoring">停止监测</string>
+    <string name="fullscreen">全屏</string>
+    <string name="exit_fullscreen">退出全屏</string>
+    <string name="power_curve">功率</string>
+    <string name="voltage_curve">电压</string>
+    <string name="current_curve">电流</string>
+    <string name="session_detail">会话详情</string>
+    <string name="duration">时长</string>
+    <string name="total_mah">累计电量</string>
+    <string name="avg_power">平均功率</string>
+    <string name="peak_power">峰值功率</string>
+    <string name="start_level">起始电量</string>
+    <string name="end_level">结束电量</string>
+    <string name="charge_type">充电方式</string>
+    <string name="data_retention">数据保留天数</string>
+    <string name="about">关于</string>
+    <string name="version">版本</string>
+    <string name="settings_data_retention">数据保留策略</string>
+    <string name="settings_data_retention_summary">采样明细保留 90 天，会话汇总永久保留</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_about_summary">充电监测 v1.0</string>
+    <string name="no_data">暂无数据</string>
+    <string name="session_count">共 %d 次充电</string>
+    <string name="notification_permission_required">需要通知权限才能显示充电状态</string>
+    <string name="grant_permission">授权</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="retention_entries">
+        <item>30 天</item>
+        <item>60 天</item>
+        <item>90 天</item>
+        <item>180 天</item>
+    </string-array>
+
+    <string-array name="retention_values">
+        <item>30</item>
+        <item>60</item>
+        <item>90</item>
+        <item>180</item>
+    </string-array>
+</resources>

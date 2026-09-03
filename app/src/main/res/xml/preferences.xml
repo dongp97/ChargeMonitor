@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/settings_data_retention">
+
+        <ListPreference
+            android:key="retention_days"
+            android:title="数据保留天数"
+            android:summary="采样明细保留 %s 天，会话汇总永久保留"
+            android:entries="@array/retention_entries"
+            android:entryValues="@array/retention_values"
+            android:defaultValue="90"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="关于">
+
+        <Preference
+            android:key="version"
+            android:title="@string/version"
+            android:summary="@string/settings_about_summary"
+            android:selectable="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
