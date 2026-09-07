@@ -3,8 +3,8 @@
     <shortcut
         android:enabled="true"
         android:shortcutId="calibrate"
-        android:shortcutLongLabel="校准与设置"
-        android:shortcutShortLabel="校准设置">
+        android:shortcutLongLabel="@string/shortcut_long_label"
+        android:shortcutShortLabel="@string/shortcut_short_label">
         <intent
             android:action="com.dongp.switch5g.CALIBRATE"
             android:targetClass="com.dongp.switch5g.CalibrationActivity"

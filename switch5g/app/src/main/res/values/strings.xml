@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="settings_title">5G 开关设置</string>
+    <!-- shortcut 的 label 必须是资源引用，不能硬编码 -->
+    <string name="shortcut_short_label">校准设置</string>
+    <string name="shortcut_long_label">校准与设置</string>
     <string name="help_text">使用步骤：\n\n1. 手机：设置 → 我的设备 → 全部参数，连点「MIUI 版本」开启开发者选项；\n   再到 设置 → 更多设置 → 开发者选项，打开「USB 调试」和「USB 调试（安全设置）」。\n\n2. 手机 USB 连电脑，电脑上执行一条命令（只需一次，重启不失效）：\n   adb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS\n\n3. 回到本页，手动去 设置 → 双卡与移动网络 → 点你的数据卡 → 网络类型选择，\n   选成「5G 优先 / 启用 5G」，然后回到本页点【① 记录：当前 = 5G 开启状态】。\n\n4. 再切到「仅 4G / 关闭 5G」，回到本页点【② 记录：当前 = 5G 关闭状态】。\n\n5. 之后用「自动任务」设置：每天 23:00 启动「关闭5G」，每天 07:00 启动「开启5G」。\n   也可以在上方启用 App 内置定时，两个方式选一个用即可。\n\n提示：若切换后没有马上生效，可手动开关一次飞行模式。</string>
 </resources>
