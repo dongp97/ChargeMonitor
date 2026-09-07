@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 默认：向上箭头（开启）。off5g flavor 会覆盖成向下箭头 -->
+    <path
+        android:fillColor="@color/ic_launcher_foreground_tint"
+        android:pathData="M54,36 L76,62 H64 V80 H44 V62 H32 Z" />
+</vector>

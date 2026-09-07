@@ -1,0 +1,68 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.dongp.switch5g'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.dongp.switch5g"
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    flavorDimensions += ["mode"]
+
+    productFlavors {
+        // 生成两个独立 APK / 独立桌面图标：开启5G 与 关闭5G
+        on5g {
+            dimension "mode"
+            applicationIdSuffix ".on"
+            resValue "string", "app_name", "开启5G"
+            buildConfigField "String", "MODE", "\"ON\""
+        }
+        off5g {
+            dimension "mode"
+            applicationIdSuffix ".off"
+            resValue "string", "app_name", "关闭5G"
+            buildConfigField "String", "MODE", "\"OFF\""
+        }
+    }
+
+    buildTypes {
+        debug {
+            // 两个 flavor 都用 debug 签名，方便直接安装
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            output.outputFileName = "switch5g-${variant.flavorName}-${variant.buildType.name}.apk"
+        }
+    }
+}
+
+dependencies {
+    // 仅使用 Android 原生 API，无第三方依赖
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:shortcutId="calibrate"
+        android:shortcutLongLabel="校准与设置"
+        android:shortcutShortLabel="校准设置">
+        <intent
+            android:action="com.dongp.switch5g.CALIBRATE"
+            android:targetClass="com.dongp.switch5g.CalibrationActivity"
+            android:targetPackage="com.dongp.switch5g.on" />
+    </shortcut>
+</shortcuts>

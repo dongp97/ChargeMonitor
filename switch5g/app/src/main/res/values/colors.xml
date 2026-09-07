@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 由各 flavor 覆盖：on5g 绿色，off5g 灰色 -->
+    <color name="ic_launcher_background">#FF34C759</color>
+    <color name="ic_launcher_foreground_tint">#FFFFFFFF</color>
+</resources>
