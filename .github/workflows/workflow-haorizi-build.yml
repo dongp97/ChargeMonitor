@@ -5,6 +5,8 @@ on:
     branches: [ main, master ]
     paths:
       - 'haorizi/**'
+      # 必须把自己也列进去，否则「只改 workflow」的推送不会触发构建
+      - '.github/workflows/workflow-haorizi-build.yml'
       - '.github/workflows/haorizi-build.yml'
   workflow_dispatch:
 

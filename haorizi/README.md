@@ -79,9 +79,13 @@ node tools/test-ui.js      # 界面层（jsdom 真实点击）：121 项
 本机不需要 Android SDK。推到 GitHub 后由 Actions 编译：
 
 ```bash
-gh workflow run haorizi-build.yml
-# 产物：haorizi/app/build/outputs/apk/debug/app-debug.apk
+gh workflow run workflow-haorizi-build.yml
+# 构建产物：haorizi/app/build/outputs/apk/debug/app-debug.apk
+# workflow 会先 find 定位、再 cp 到 dist/ 后上传，artifact 名 haorizi-apk
 ```
+
+> 注意 `paths` 过滤必须包含 workflow 文件自身的路径，否则「只改 workflow」
+> 的推送不会触发构建（`BUILD_STAMP` 用于保证每次推送都有 `haorizi/**` 变更）。
 
 ---
 
