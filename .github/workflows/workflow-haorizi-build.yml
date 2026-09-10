@@ -76,8 +76,12 @@ jobs:
             echo "::error::No APK produced by assembleDebug"
             exit 1
           fi
+          # 产物名带版本号：同一次改动前后很容易都叫 v1.0，装上分不清是哪一版
+          VN=$(grep -oP 'versionName\s*=\s*"\K[^"]+' haorizi/app/build.gradle.kts | head -n 1)
+          VN=${VN:-unknown}
+          echo "versionName=$VN"
           mkdir -p dist
-          cp "$APK" "dist/HaoRiZi-v1.0-debug.apk"
+          cp "$APK" "dist/HaoRiZi-v${VN}-debug.apk"
           ls -lh dist/
 
       - name: Upload APKs

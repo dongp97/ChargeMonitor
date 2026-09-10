@@ -43,6 +43,16 @@ class MainActivity : Activity() {
     private lateinit var root: FrameLayout
     private var backHandled = false
 
+    /** 真实版本号（取自 PackageManager）——设置页要显示它，便于确认装的是哪一版 */
+    private val appVersion: String by lazy {
+        try {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+        } catch (_: Exception) {
+            "1.0"
+        }
+    }
+
     private val assetLoader: WebViewAssetLoader by lazy {
         WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
@@ -75,6 +85,11 @@ class MainActivity : Activity() {
         web.setBackgroundColor(Color.TRANSPARENT)
         web.overScrollMode = View.OVER_SCROLL_NEVER
         root.addView(web, FrameLayout.LayoutParams(-1, -1))
+
+        // ★ 同步打上安全区兜底值（只读系统资源，不等 insets 分发）。
+        // 这样从第一帧起就有留白；后面 insets 到了再用实测值覆盖。
+        // 不依赖任何回调 = 不存在"回调没来就一直顶到状态栏"的可能。
+        applyFallbackSafeArea()
 
         web.settings.apply {
             javaScriptEnabled = true
@@ -144,11 +159,10 @@ class MainActivity : Activity() {
 
         web.loadUrl(HOME)
         web.post { ViewCompat.requestApplyInsets(root) }
-        // 兜底：个别 ROM 首轮 insets 分发始终不来，延迟再查一次，
-        // 仍然没值就直接用系统资源里的栏高。宁可略高，也不能被状态栏压住。
+        // 二次兜底：真机上万一连资源里的栏高都读到 0，延迟再查一次。
         web.postDelayed({
-            if (safeTop < 0) {
-                Log.w(ReminderScheduler.TAG, "insets 未分发，改用系统资源兜底")
+            if (safeTop <= 0 || safeBottom <= 0) {
+                Log.w(ReminderScheduler.TAG, "安全区仍为 0，再次套用系统资源兜底")
                 applyFallbackSafeArea()
             }
         }, 500)
@@ -237,12 +251,12 @@ class MainActivity : Activity() {
     private var safeTop = -1
     private var safeBottom = -1
 
-    /** 系统栏高度兜底：个别 ROM 首轮分发给 0，这时按系统资源里的高度补上 */
+    /** 系统栏高度兜底：读系统资源，缺资源或读到 0 时退回经验值 */
     private fun systemBarHeight(name: String, defDp: Int): Int {
         val id = resources.getIdentifier(name, "dimen", "android")
-        val px = if (id > 0) resources.getDimensionPixelSize(id)
-        else (defDp * resources.displayMetrics.density).toInt()
-        return px.coerceAtLeast(0)
+        val px = if (id > 0) resources.getDimensionPixelSize(id) else 0
+        if (px > 0) return px
+        return (defDp * resources.displayMetrics.density).toInt().coerceAtLeast(defDp)
     }
 
     /**
@@ -271,15 +285,24 @@ class MainActivity : Activity() {
         Log.i(ReminderScheduler.TAG, "安全区 top=$top bottom=$bottom")
     }
 
-    /** 首轮 insets 分发缺席时的兜底：直接按系统资源里的栏高留白 */
+    /**
+     * 兜底安全区：完全同步执行，只用系统资源里的栏高，不依赖 insets 分发。
+     *
+     * onCreate 里第一件事就调用它，所以**任何情况下首帧都不会被状态栏压住**；
+     * 之后 insets 真正到达时，[applySafeArea] 会用实测值（含挖孔、键盘）覆盖。
+     */
     private fun applyFallbackSafeArea() {
-        val top = systemBarHeight("status_bar_height", 28)
+        var top = systemBarHeight("status_bar_height", 28)
         val bottom = systemBarHeight("navigation_bar_height", 24)
+        if (top < dp(24)) top = dp(24)
+        if (top == safeTop && bottom == safeBottom) return
         safeTop = top
         safeBottom = bottom
         web.setPadding(0, top, 0, bottom)
         Log.i(ReminderScheduler.TAG, "兜底安全区 top=$top bottom=$bottom")
     }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun applyStatusBarIcons(lightIcons: Boolean) {
         val c = WindowInsetsControllerCompat(window, root)
@@ -301,7 +324,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun info(): String {
             val o = JSONObject()
-            o.put("version", "1.0")
+            o.put("version", appVersion)
             o.put("sdk", Build.VERSION.SDK_INT)
             o.put("model", Build.MODEL)
             o.put("notifyGranted", notifyGranted())

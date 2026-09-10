@@ -501,6 +501,8 @@
       '<div class="logo">' + svg('cal', 30) + '</div>' +
       '<div class="nm">好日子</div>' +
       '<div class="vs">版本 ' + esc(info.version || '1.0') + ' · 农历算法 1900–2100</div>' +
+      (info.safeTop === undefined ? '' :
+        '<div class="vs">安全区 上 ' + info.safeTop + ' / 下 ' + info.safeBottom + ' px</div>') +
       '<div class="ds">把重要的日子记一次，往后每年它自己会来找你。<br>' +
       '所有数据只存在这台手机上，不联网、不上传。<br>' +
       '农历三十遇到小月时，按「廿九当三十过」处理。</div>' +

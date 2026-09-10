@@ -1,0 +1,21 @@
+好日子 · 构建戳记
+
+每次推送前更新本文件，确保 haorizi/** 有实际变更，从而稳定触发
+.github/workflows/workflow-haorizi-build.yml（该 workflow 按 paths 过滤触发）。
+
+最近一次推送：
+  2026-09-10 16:40 CST  v1.0.1  修复 APK 产物上传路径 + workflow 触发条件
+  2026-09-10 17:05 CST  v1.0.1  修安全区：insets 监听器挂晚了导致内容压住状态栏
+                                - setDecorFitsSystemWindows 提到 setContentView 之前
+                                - 挂监听器后主动 requestApplyInsets
+                                - 首轮分发缺席时用系统资源栏高兜底（延迟 500ms 自检）
+                                - 主题加 windowLayoutInDisplayCutoutMode=shortEdges
+  2026-09-10 17:20 CST  v1.0.2  真机仍压状态栏 → 改为「首帧同步留白」
+                                - onCreate 里同步调用 applyFallbackSafeArea()，
+                                  只读系统资源（status_bar_height / navigation_bar_height），
+                                  不等 insets 分发，第一帧就有留白，杜绝 0 留白
+                                - 资源读到 0 时退回经验值 28dp / 24dp，top 再兜 24dp 下限
+                                - info() 版本号改为真实 versionName（PackageManager 取），
+                                  设置页新增「安全区 上 X / 下 Y px」一行，便于一眼确认
+                                - versionCode 3 / versionName 1.0.2
+                                - 注意：与 v1.0.1 的包同名同版本，装完以设置页版本号为准
