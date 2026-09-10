@@ -64,10 +64,24 @@ jobs:
       - name: Build Debug APK
         run: gradle -p haorizi --no-daemon --stacktrace assembleDebug
 
+      - name: Locate APK
+        run: |
+          echo "=== apk outputs tree ==="
+          find haorizi/app/build/outputs -type f -name '*.apk' -print || true
+          echo "=== renaming ==="
+          APK=$(find haorizi/app/build/outputs -type f -name '*.apk' | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "::error::No APK produced by assembleDebug"
+            exit 1
+          fi
+          mkdir -p dist
+          cp "$APK" "dist/HaoRiZi-v1.0-debug.apk"
+          ls -lh dist/
+
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
           name: haorizi-apk
-          path: haorizi/app/build/outputs/apk/*/debug/*.apk
+          path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
