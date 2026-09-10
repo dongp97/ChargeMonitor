@@ -195,12 +195,21 @@
     if (ti.term) sub.push(ti.term);
     sub.push(L.constellation(ti.y.m, ti.y.d));
 
+    // 临时内部标记：只在本机原生桥给了字段时显示，用来一眼确认
+    // 「装的是哪一版」+「原生留白到底算出多少」。修好后删掉这一段。
+    var _di = nInfo();
+    var diag = (_di && _di.safeTop !== undefined)
+      ? '<div class="hd-sub" style="opacity:.55">内部标记 v' + esc(_di.version || '?') +
+        ' · 顶部留白 ' + _di.safeTop + 'px · 底部 ' + _di.safeBottom + 'px</div>'
+      : '';
+
     return '<div class="hd">' +
       '<div>' +
       '<div class="hd-day">' + ti.y.m + '月' + ti.y.d + '日' +
       '<span style="font-size:14px;color:var(--text-3);font-weight:500;margin-left:7px">周' +
       L.WEEK_CN[ti.wd] + '</span></div>' +
       '<div class="hd-sub">' + esc(sub.join(' · ')) + '</div>' +
+      diag +
       '</div>' +
       '<div class="hd-act">' +
       '<button class="icbtn" data-act="tab" data-id="cal">' + svg('cal', 20) + '</button>' +

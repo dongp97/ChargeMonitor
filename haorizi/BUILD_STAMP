@@ -19,3 +19,12 @@
                                   设置页新增「安全区 上 X / 下 Y px」一行，便于一眼确认
                                 - versionCode 3 / versionName 1.0.2
                                 - 注意：与 v1.0.1 的包同名同版本，装完以设置页版本号为准
+  2026-09-10 17:32 CST  v1.0.3  真机仍压状态栏 → 改用 margin，并让版本可一眼看到
+                                - ★ 安全区从 WebView 的 padding 改为 layout margin：
+                                  margin 由 FrameLayout 排版决定 View 边界，只要设了必然生效；
+                                  padding 依赖 WebView 把内边距让给网页内容，真机上疑似无效
+                                - 首页顶栏加一行临时「内部标记 v1.0.3 · 顶部留白 Xpx · 底部 Ypx」，
+                                  任何一张首页截图即可判定：装的是哪版 + 留白算出来没有
+                                  （修好后删掉 headerHtml 里 diag 那段）
+                                - info() 的 version 用 PackageManager 真实 versionName；设置页也显示安全区
+                                - versionCode 4 / versionName 1.0.3

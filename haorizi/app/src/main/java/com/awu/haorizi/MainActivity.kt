@@ -260,7 +260,7 @@ class MainActivity : Activity() {
     }
 
     /**
-     * 把状态栏 / 挖孔 / 手势条 / 键盘的高度算成 WebView 的内边距。
+     * 把状态栏 / 挖孔 / 手势条 / 键盘的高度算成 WebView 的外边距。
      *
      * systemBars() 已含状态栏和导航栏，再并上 displayCutout()，
      * getInsets 取并集最大值，所以挖孔比状态栏高时也能盖住。
@@ -278,11 +278,7 @@ class MainActivity : Activity() {
         if (top <= 0) top = systemBarHeight("status_bar_height", 28)
         if (bottom <= 0) bottom = systemBarHeight("navigation_bar_height", 24)
 
-        if (top == safeTop && bottom == safeBottom) return
-        safeTop = top
-        safeBottom = bottom
-        web.setPadding(0, top, 0, bottom)
-        Log.i(ReminderScheduler.TAG, "安全区 top=$top bottom=$bottom")
+        applySafeAreaPx(top, bottom)
     }
 
     /**
@@ -295,11 +291,30 @@ class MainActivity : Activity() {
         var top = systemBarHeight("status_bar_height", 28)
         val bottom = systemBarHeight("navigation_bar_height", 24)
         if (top < dp(24)) top = dp(24)
-        if (top == safeTop && bottom == safeBottom) return
-        safeTop = top
-        safeBottom = bottom
-        web.setPadding(0, top, 0, bottom)
-        Log.i(ReminderScheduler.TAG, "兜底安全区 top=$top bottom=$bottom")
+        applySafeAreaPx(top, bottom)
+    }
+
+    /**
+     * 真正落地：改 WebView 的 **layout margin**，而不是 padding。
+     *
+     * 为什么用 margin：margin 由 FrameLayout 排版决定 WebView 这个 View 的边界，
+     * 只跟布局有关，**不依赖 WebView 有没有把 padding 让给网页内容**——那条路
+     * 在真机上被证明可能完全不生效（留白为 0）。margin 只要设了就一定生效。
+     * 让出来的那条区域露出的是 root 的底色（已同步成页面主题色），观感一致。
+     */
+    private fun applySafeAreaPx(top: Int, bottom: Int) {
+        val t = top.coerceAtLeast(0)
+        val b = bottom.coerceAtLeast(0)
+        if (t == safeTop && b == safeBottom) return
+        safeTop = t
+        safeBottom = b
+        val lp = web.layoutParams
+        if (lp is FrameLayout.LayoutParams) {
+            lp.topMargin = t
+            lp.bottomMargin = b
+            web.layoutParams = lp
+        }
+        Log.i(ReminderScheduler.TAG, "安全区 top=$t bottom=$b")
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
