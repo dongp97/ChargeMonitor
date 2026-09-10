@@ -338,12 +338,37 @@
     var firstWd = L.weekdayOfNum(first);
     var start = first - firstWd;
 
-    var mark = {};
-    C.decorate(S.items, ti.t).forEach(function (r) {
-      var n = r.i.n;
-      if (!mark[n]) mark[n] = [];
-      if (mark[n].length < 3) mark[n].push(C.KINDS[r.it.kind].c1);
+    // 把「这 42 格里每一天有哪些日子」算出来。
+    // 不能只看今天往后的下一次发生 —— 那样翻到过去的月份生日就不显示圆点了。
+    var gridEnd = start + 41;
+    var dayItems = {};
+    function markOn(n, it) {
+      if (n < start || n > gridEnd) return;
+      if (!dayItems[n]) dayItems[n] = [];
+      if (dayItems[n].length < 4) dayItems[n].push(it);
+    }
+    S.items.forEach(function (it) {
+      if (it.repeat === 'once') {
+        var n0 = (it.dateType === 'lunar')
+          ? L.numOfLunar(it.year, it.month, it.day, it.isLeap)
+          : L.ymdToNum(it.year, it.month, it.day);
+        if (n0 != null) markOn(n0, it);
+        return;
+      }
+      var cur = start;
+      for (var guard = 0; guard < 10; guard++) {
+        var n = L.nextOccurrence(it, cur, 'year', true);
+        if (n == null || n > gridEnd) break;
+        markOn(n, it);
+        cur = n + 1;
+      }
     });
+
+    function idSet(list) {
+      var s = {};
+      (list || []).forEach(function (it) { s[it.id] = 1; });
+      return s;
+    }
 
     var cells = '';
     for (var i = 0; i < 42; i++) {
@@ -358,8 +383,9 @@
       if (n === ti.t) cls += ' today';
       if (n === calSel) cls += ' sel';
       if (L.weekdayOfNum(n) === 0 || L.weekdayOfNum(n) === 6) cls += ' wend';
-      var dots = mark[n] ? '<span class="dots">' + mark[n].map(function (c) {
-        return '<i style="background:' + c + '"></i>';
+      var marks = dayItems[n] || [];
+      var dots = marks.length ? '<span class="dots">' + marks.slice(0, 3).map(function (x) {
+        return '<i style="background:' + C.KINDS[x.kind].c1 + '"></i>';
       }).join('') + '</span>' : '';
       cells += '<div class="' + cls + '" data-act="calsel" data-id="' + n + '">' +
         '<span class="g">' + ymd.d + '</span>' +
@@ -368,14 +394,10 @@
 
     var selYmd = L.numToYmd(calSel);
     var selLun = L.solarToLunar(selYmd.y, selYmd.m, selYmd.d);
-    var selRows = C.decorate(S.items, ti.t).filter(function (r) { return r.i.n === calSel; });
-    // 当天就是某个公历/农历日程的情况（比如生日正是今天）也一并列出
-    if (calSel !== ti.t) {
-      var selRows2 = C.decorate(S.items, calSel).filter(function (r) { return r.i.n === calSel; });
-      selRows2.forEach(function (r) {
-        if (!selRows.some(function (x) { return x.it.id === r.it.id; })) selRows.push(r);
-      });
-    }
+    // 行内容仍按「今天」为基准渲染 —— 全 App 的行都表示「下一次是什么时候」，
+    // 这样翻到过去某天也不会出现「今天」这种自相矛盾的角标。
+    var selSet = idSet(dayItems[calSel]);
+    var selRows = C.decorate(S.items, ti.t).filter(function (r) { return selSet[r.it.id]; });
 
     var selTitle = selYmd.m + '月' + selYmd.d + '日 周' + L.WEEK_CN[L.weekdayOfNum(calSel)];
     var selSub = (selLun ? '农历' + L.lunarText(selLun.month, selLun.day, selLun.isLeap) : '');
