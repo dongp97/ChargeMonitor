@@ -17,6 +17,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
@@ -31,7 +32,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.updatePadding
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import org.json.JSONObject
@@ -61,6 +61,11 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 必须在 setContentView 之前声明「内容区自己处理系统栏」。
+        // 放到后面的话，首次 insets 分发可能已经按旧模式走完了，
+        // 之后不再触发，页面就会顶到状态栏上去。
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         root = FrameLayout(this)
         root.setBackgroundColor(Color.parseColor(ReminderStore.chromeBg(this)))
@@ -120,21 +125,33 @@ class MainActivity : Activity() {
 
         web.addJavascriptInterface(Bridge(), "AndroidBridge")
 
-        // 状态栏 / 导航栏 / 键盘区域用 App 自己的底色填充，页面被安全区顶下来。
-        // IME 必须算进来，否则弹出键盘会盖住编辑表单。
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // 状态栏 / 挖孔 / 手势条 / 键盘区域：全部由原生算好，作为 WebView 的内边距。
+        // 页面本身不处理安全区，HTML 那边也不需要 env()。
+        root.fitsSystemWindows = false
+        web.fitsSystemWindows = false
+
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                    or WindowInsetsCompat.Type.displayCutout()
-                    or WindowInsetsCompat.Type.ime()
-            )
-            web.updatePadding(top = bars.top, bottom = bars.bottom)
+            applySafeArea(insets)
             insets
         }
+        // ⚠️ 挂上监听器后必须主动要一次。
+        // 首轮 insets 分发可能在我们挂监听器之前就过去了，此后若没有任何
+        // insets 变化事件（不动键盘、不转屏），回调永远不触发 ——
+        // 表现就是页面一路顶到状态栏上面，和状态栏重叠。
+        ViewCompat.requestApplyInsets(root)
+
         applyStatusBarIcons(ReminderStore.chromeLight(this))
 
         web.loadUrl(HOME)
+        web.post { ViewCompat.requestApplyInsets(root) }
+        // 兜底：个别 ROM 首轮 insets 分发始终不来，延迟再查一次，
+        // 仍然没值就直接用系统资源里的栏高。宁可略高，也不能被状态栏压住。
+        web.postDelayed({
+            if (safeTop < 0) {
+                Log.w(ReminderScheduler.TAG, "insets 未分发，改用系统资源兜底")
+                applyFallbackSafeArea()
+            }
+        }, 500)
 
         // 打开时把闹钟刷新一遍（系统可能在后台清过）
         ReminderScheduler.reschedule(this)
@@ -148,6 +165,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // 回到前台时重新要一次安全区（从后台回来时系统栏状态可能变过）
+        if (::root.isInitialized) ViewCompat.requestApplyInsets(root)
         web.evaluateJavascript("window.HR&&window.HR.onResume&&window.HR.onResume()", null)
     }
 
@@ -213,6 +232,55 @@ class MainActivity : Activity() {
         }
     }
 
+    // ------------------------------------------------------------ 安全区
+
+    private var safeTop = -1
+    private var safeBottom = -1
+
+    /** 系统栏高度兜底：个别 ROM 首轮分发给 0，这时按系统资源里的高度补上 */
+    private fun systemBarHeight(name: String, defDp: Int): Int {
+        val id = resources.getIdentifier(name, "dimen", "android")
+        val px = if (id > 0) resources.getDimensionPixelSize(id)
+        else (defDp * resources.displayMetrics.density).toInt()
+        return px.coerceAtLeast(0)
+    }
+
+    /**
+     * 把状态栏 / 挖孔 / 手势条 / 键盘的高度算成 WebView 的内边距。
+     *
+     * systemBars() 已含状态栏和导航栏，再并上 displayCutout()，
+     * getInsets 取并集最大值，所以挖孔比状态栏高时也能盖住。
+     */
+    private fun applySafeArea(insets: WindowInsetsCompat) {
+        val bars = insets.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+        )
+        val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+
+        var top = bars.top
+        // 键盘弹起时它盖住的是导航栏那一侧，取较大值
+        var bottom = maxOf(bars.bottom, ime.bottom)
+
+        if (top <= 0) top = systemBarHeight("status_bar_height", 28)
+        if (bottom <= 0) bottom = systemBarHeight("navigation_bar_height", 24)
+
+        if (top == safeTop && bottom == safeBottom) return
+        safeTop = top
+        safeBottom = bottom
+        web.setPadding(0, top, 0, bottom)
+        Log.i(ReminderScheduler.TAG, "安全区 top=$top bottom=$bottom")
+    }
+
+    /** 首轮 insets 分发缺席时的兜底：直接按系统资源里的栏高留白 */
+    private fun applyFallbackSafeArea() {
+        val top = systemBarHeight("status_bar_height", 28)
+        val bottom = systemBarHeight("navigation_bar_height", 24)
+        safeTop = top
+        safeBottom = bottom
+        web.setPadding(0, top, 0, bottom)
+        Log.i(ReminderScheduler.TAG, "兜底安全区 top=$top bottom=$bottom")
+    }
+
     private fun applyStatusBarIcons(lightIcons: Boolean) {
         val c = WindowInsetsControllerCompat(window, root)
         c.isAppearanceLightStatusBars = lightIcons
@@ -238,6 +306,9 @@ class MainActivity : Activity() {
             o.put("model", Build.MODEL)
             o.put("notifyGranted", notifyGranted())
             o.put("exactAlarm", ReminderScheduler.canScheduleExact(this@MainActivity))
+            // 安全区实测值，方便排查"内容顶到状态栏"这类问题
+            o.put("safeTop", safeTop)
+            o.put("safeBottom", safeBottom)
             return o.toString()
         }
 

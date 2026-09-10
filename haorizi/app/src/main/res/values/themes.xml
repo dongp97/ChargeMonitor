@@ -5,6 +5,9 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <!-- 让窗口铺满挖孔区域，挖孔的留白由代码里的 insets 统一算 -->
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:colorAccent">#FF6B5B</item>
     </style>
 </resources>
