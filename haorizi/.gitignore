@@ -1,0 +1,18 @@
+# Android / Gradle 产物
+build/
+.gradle/
+local.properties
+*.apk
+*.ap_
+*.dex
+*.class
+captures/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 系统
+.DS_Store
+Thumbs.db

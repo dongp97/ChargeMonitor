@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 挂环 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M38,22h8a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-9A2.5,2.5 0 0 1 38,22z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M62,22h8a2.5,2.5 0 0 1 2.5,2.5v9a2.5,2.5 0 0 1 -2.5,2.5h-8a2.5,2.5 0 0 1 -2.5,-2.5v-9A2.5,2.5 0 0 1 62,22z" />
+
+    <!-- 日历本体 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M33,32h42a5,5 0 0 1 5,5v40a5,5 0 0 1 -5,5H33a5,5 0 0 1 -5,-5V37a5,5 0 0 1 5,-5z" />
+
+    <!-- 顶部色带（圆角只在上面） -->
+    <path
+        android:fillColor="#FF6B5B"
+        android:pathData="M28,37a5,5 0 0 1 5,-5h42a5,5 0 0 1 5,5v11H28z" />
+
+    <!-- 心 -->
+    <group
+        android:scaleX="1.5"
+        android:scaleY="1.5"
+        android:translateX="36"
+        android:translateY="45.7">
+        <path
+            android:fillColor="#FF6B5B"
+            android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
+    </group>
+</vector>
